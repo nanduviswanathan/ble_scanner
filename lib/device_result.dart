@@ -12,9 +12,9 @@ class DeviceResult {
         child: Column(
           children: <Widget>[
             ListTile(
-              leading: Text(this.rssi.toString()),
-              title: Text('${this.name} (${this.localeName})'),
-              subtitle: Text('${this.macAddress}'),
+              leading: Text(rssi.toString()),
+              title: Text('$name ($localeName)'),
+              subtitle: Text(macAddress),
             ),
           ],
         ));

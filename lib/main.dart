@@ -23,7 +23,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key}) : super(key: key);
 
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -33,10 +32,13 @@ class _MyHomePageState extends State<MyHomePage> {
   static List<DeviceResult> scanResult = [];
   late Timer bleScan;
 
- bool isLoading  = true;
+  bool isLoading = true;
 
   void scanDevices() {
     print("scan started");
+    setState(() {
+      isLoading = false;
+    });
     flutterBlue.startScan(timeout: Duration(seconds: 4));
     flutterBlue.scanResults.listen((results) {
       setState(() {
@@ -65,10 +67,23 @@ class _MyHomePageState extends State<MyHomePage> {
     // });
   }
 
+  void hideRefreshBtn() async {
+    Future.delayed(const Duration(seconds: 4), () {
+      //asynchronous delay
+      //checks if widget is still active and not disposed
+      setState(() {
+        //tells the widget builder to rebuild again because ui has updated
+        isLoading =
+            true; //update the variable declare this under your class so its accessible for both your widget build and initState which is located under widget build{}
+      });
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     scanDevices();
+    hideRefreshBtn();
   }
 
   @override
@@ -85,22 +100,28 @@ class _MyHomePageState extends State<MyHomePage> {
                   onTap: () {
                     print("refresh pressed");
                     scanDevices();
+                    hideRefreshBtn();
                   },
                   child: const Icon(
                     Icons.refresh,
                     size: 26.0,
                   ),
                 ),
-              )
-          ),
+              )),
         ],
       ),
-      body: scanResult.isEmpty ? const Center(child: CircularProgressIndicator())  : ListView.builder(
-          itemCount: scanResult.length,
-          itemBuilder: (BuildContext context, int index) {
-            final DeviceResult r = scanResult[index];
-            return r.createCard();
-          }),
+      body: !isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : isLoading && scanResult.isEmpty
+              ? const Center(
+                  child: Text("No BLE Devices found. Scan Again!!"),
+                )
+              : ListView.builder(
+                  itemCount: scanResult.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final DeviceResult r = scanResult[index];
+                    return r.createCard();
+                  }),
     );
   }
 }
