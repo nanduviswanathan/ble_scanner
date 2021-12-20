@@ -50,10 +50,8 @@ class _MyHomePageState extends State<MyHomePage> {
         r.advertisementData.serviceUuids.forEach((uuid) => print(uuid));
         print('${r.advertisementData.serviceData}');
         print('${r.device.id}');
-        if (r.device.type != BluetoothDeviceType.unknown) {
-          scanResult.add(DeviceResult(r.device.name,
-              r.advertisementData.localName, r.rssi, r.device.id.toString()));
-        }
+        scanResult.add(DeviceResult(r.device.name,
+            r.advertisementData.localName, r.rssi, r.device.id.toString()));
       }
     });
     print("Scanned device" + scanResult.length.toString());
