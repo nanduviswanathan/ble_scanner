@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "376054658245",
+    "project_id": "blelist",
+    "storage_bucket": "blelist.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:376054658245:android:cc58fedeff9c944e2cecac",
+        "android_client_info": {
+          "package_name": "com.gadgeon.ble_list"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "376054658245-3kvpr5ubrn5aectjpni3eimjctc37g0q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5sxVH8lGMW5HDjuSuLiXlz-6lY0wpgHc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "376054658245-3kvpr5ubrn5aectjpni3eimjctc37g0q.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "376054658245-no14mfbqfaod88o3sajtni5s0i7g1kuo.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.gadgeon.bleList"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
