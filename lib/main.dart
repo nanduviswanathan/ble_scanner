@@ -93,10 +93,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void scanDevices() {
     print("scan started");
-    setState(() {
-      isLoading = false;
-    });
-
     flutterBlue.startScan(timeout: const Duration(minutes: 4));
     flutterBlue.scanResults.listen((results) {
       setState(() {
@@ -120,6 +116,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void hideRefreshBtn() async {
+    setState(() {
+      isLoading = false;
+    });
     Future.delayed(const Duration(seconds: 4), () {
       //asynchronous delay
       //checks if widget is still active and not disposed
@@ -163,7 +162,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     flutterBlue.stopScan();
                     await FirebaseAnalytics.instance
                         .logEvent(name: 'view_product', parameters: {
-                      'product_id': 1234,
+                      'product_id': 98765,
                     });
                   },
                   child: const Icon(
