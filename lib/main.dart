@@ -21,16 +21,15 @@ const _kTestingCrashlytics = true;
 Future<void> main() async {
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
     runApp(const MyApp());
   }, (error, stackTrace) {
     FirebaseCrashlytics.instance.recordError(error, stackTrace);
   });
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -49,7 +48,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key}) : super(key: key);
 
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -57,12 +55,15 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   static List<DeviceResult> scanResult = [];
+  List<DeviceResult> _searchResult = [];
   late Timer bleScan;
   FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   late Future<void> _initializeFlutterFireFuture;
 
   bool isLoading = true;
+  bool search = false;
 
+  TextEditingController searchController = TextEditingController();
 
   Future<void> _testAsyncErrorOnInit() async {
     Future<void>.delayed(const Duration(seconds: 2), () {
@@ -90,14 +91,13 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-
-
   void scanDevices() {
     print("scan started");
     setState(() {
       isLoading = false;
     });
-    flutterBlue.startScan(timeout: Duration(seconds: 4));
+
+    flutterBlue.startScan(timeout: const Duration(minutes: 4));
     flutterBlue.scanResults.listen((results) {
       setState(() {
         scanResult = [];
@@ -108,6 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
         r.advertisementData.serviceUuids.forEach((uuid) => print(uuid));
         print('${r.advertisementData.serviceData}');
         print('${r.device.id}');
+        if (r.device.type != BluetoothDeviceType.unknown) {}
         scanResult.add(DeviceResult(r.device.name,
             r.advertisementData.localName, r.rssi, r.device.id.toString()));
       }
@@ -116,11 +117,6 @@ class _MyHomePageState extends State<MyHomePage> {
     for (DeviceResult r in scanResult) {
       print('${r.name} found! rssi: ${r.rssi}');
     }
-    flutterBlue.stopScan();
-    print("scan stopped");
-    // setState(() {
-    //   isLoading = true;
-    // });
   }
 
   void hideRefreshBtn() async {
@@ -138,13 +134,20 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _initializeFlutterFireFuture = _initializeFlutterFire();
-    scanDevices();
+    // scanDevices();
     hideRefreshBtn();
+    flutterBlue.isScanning.listen((event) {
+      print("scannign status" + event.toString());
+      if (!event) {
+        print("Scanning stopped ");
+        scanDevices();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool showFab = MediaQuery.of(context).viewInsets.bottom==0.0;
     return Scaffold(
       appBar: AppBar(
         title: const Text("BLE Devices"),
@@ -156,15 +159,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: GestureDetector(
                   onTap: () async {
                     print("refresh pressed");
-                    scanDevices();
                     hideRefreshBtn();
+                    flutterBlue.stopScan();
                     await FirebaseAnalytics.instance
-                        .logEvent(
-                        name: 'view_product',
-                        parameters: {
-                          'product_id': 1234,
-                        }
-                    );
+                        .logEvent(name: 'view_product', parameters: {
+                      'product_id': 1234,
+                    });
                   },
                   child: const Icon(
                     Icons.refresh,
@@ -172,45 +172,148 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
               )),
+          IconButton(
+              onPressed: () {
+                print("Search pressed");
+                setState(() {
+                  search = true;
+                });
+              },
+              icon: const Icon(Icons.search))
         ],
       ),
-      body: !isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : isLoading && scanResult.isEmpty
-              ? const Center(
-                  child: Text("No BLE Devices found. Scan Again!!"),
+      body: Column(
+        children: <Widget>[
+          Visibility(
+            visible: search,
+            child: TextField(
+              keyboardType: TextInputType.text,
+              controller: searchController,
+              onChanged: onSearchTextChanged,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Search...',
+                contentPadding:
+                    const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      search = false;
+                      _searchResult.clear();
+                      searchController.text = '';
+                    });
+                  },
+                ),
+                focusColor: Colors.grey,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: _searchResult.isNotEmpty || searchController.text.isNotEmpty
+                ? RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          color: Colors.black,
+                          fontSize: 20.0),
+                      text: "Showing ",
+                      children: <TextSpan>[
+                        TextSpan(
+                            text: '${_searchResult.length} ',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        const TextSpan(
+                            text: 'of ',
+                            style: TextStyle(fontWeight: FontWeight.normal)),
+                        TextSpan(
+                            text: '${scanResult.length}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  )
+                : RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          color: Colors.black,
+                          fontSize: 20.0),
+                      text: "Showing ",
+                      children: <TextSpan>[
+                        TextSpan(
+                            text: '${scanResult.length} ',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        const TextSpan(
+                            text: 'Devices',
+                            style: TextStyle(fontWeight: FontWeight.normal)),
+                      ],
+                    ),
+                  ),
+          ),
+          _searchResult.isNotEmpty || searchController.text.isNotEmpty
+              ? Expanded(
+                  child: ListView.builder(
+                      itemCount: _searchResult.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final DeviceResult r = _searchResult[index];
+                        return r.createCard();
+                      }),
                 )
-              : ListView.builder(
-                  itemCount: scanResult.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final DeviceResult r = scanResult[index];
-                    return r.createCard();
-                  }),
-
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked ,
-      floatingActionButton: FloatingActionButton.extended(
+              : Expanded(
+                  child: ListView.builder(
+                      itemCount: scanResult.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final DeviceResult r = scanResult[index];
+                        return r.createCard();
+                      }),
+                )
+        ],
+      ),
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.miniCenterFloat,
+      floatingActionButton: showFab? FloatingActionButton.extended(
         onPressed: () async {
           // Add your onPressed code here!
-          try {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(
-              content: Text('Recorded Error  \n'
-                  'Please crash and reopen to send data to Crashlytics'),
-              duration: Duration(seconds: 5),
-            ));
-            throw Error();
-          } catch (e, s) {
-            // "reason" will append the word "thrown" in the
-            // Crashlytics console.
-            await FirebaseCrashlytics.instance.recordError(e, s,
-                reason: 'as an example of non-fatal error from flutter');
-          }
-          // FirebaseCrashlytics.instance.crash();
+          // try {
+          //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          //     content: Text('Recorded Error  \n'
+          //         'Please crash and reopen to send data to Crashlytics'),
+          //     duration: Duration(seconds: 5),
+          //   ));
+          //   throw Error();
+          // } catch (e, s) {
+          //   // "reason" will append the word "thrown" in the
+          //   // Crashlytics console.
+          //   await FirebaseCrashlytics.instance.recordError(e, s,
+          //       reason: 'as an example of non-fatal error from flutter');
+          // }
+          FirebaseCrashlytics.instance.crash();
         },
         label: const Text('Force Crash'),
         icon: const Icon(Icons.power_settings_new_outlined),
         backgroundColor: Colors.red,
-      ),
+      ) : null
     );
+  }
+
+  onSearchTextChanged(String text) async {
+    _searchResult.clear();
+    print(
+        "text is- ${searchController.text} && ${searchController.text.isEmpty}");
+    if (text.isEmpty) {
+      setState(() {});
+      return;
+    }
+
+    scanResult.forEach((r) {
+      if (r.name.toLowerCase().startsWith(text.toLowerCase())) {
+        _searchResult.add(r);
+      }
+    });
+
+    setState(() {});
   }
 }
